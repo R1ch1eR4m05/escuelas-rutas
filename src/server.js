@@ -14,6 +14,15 @@ const rutasDenue = require('./rutas/denue');
 const app = express();
 const PUERTO = process.env.PUERTO || process.env.PORT || 3000;
 
+/**
+ * Interfaz donde escucha el servidor.
+ * Sin definir escucha en todas (para poder abrirlo desde el celular en la
+ * red local). Detrás de un proxy como nginx conviene HOST=127.0.0.1: así el
+ * puerto no queda expuesto a internet y todo el tráfico pasa por el proxy,
+ * que es quien pide la contraseña.
+ */
+const HOST = process.env.HOST || undefined;
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
@@ -58,16 +67,19 @@ function direccionesLocales() {
   return encontradas.sort((a, b) => puntuar(a) - puntuar(b));
 }
 
-app.listen(PUERTO, () => {
+app.listen(PUERTO, HOST, () => {
   const indiceExiste = fs.existsSync(path.join(__dirname, '..', 'db', 'indice.json'));
   console.log(`\n  Escuelas y Rutas → http://localhost:${PUERTO}`);
-  const redes = direccionesLocales();
+  // Detrás de un proxy solo escucha en 127.0.0.1: anunciar las IPs de red
+  // sería engañoso porque no responden ahí.
+  const redes = HOST ? [] : direccionesLocales();
   if (redes.length) {
     console.log('  Desde el celular (misma red Wi-Fi):');
     for (const { nombre, ip } of redes) {
       console.log(`    http://${ip}:${PUERTO}   (${nombre})`);
     }
   }
+  if (HOST) console.log(`  Escuchando solo en ${HOST} (detrás de proxy)`);
   console.log('');
   if (!indiceExiste) {
     console.log('  ⚠ Aún no se ha importado la base de datos.');
