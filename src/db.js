@@ -10,9 +10,20 @@ const path = require('path');
 const { slug } = require('./util/geo');
 
 const RAIZ = path.join(__dirname, '..');
-const DIR_SEGMENTOS = path.join(RAIZ, 'db', 'segmentos');
-const ARCHIVO_INDICE = path.join(RAIZ, 'db', 'indice.json');
-const ARCHIVO_RUTAS = path.join(RAIZ, 'db', 'rutas.json');
+
+/**
+ * Dónde viven los datos vivos (estatus, notas, coordenadas corregidas y
+ * rutas del día).
+ *
+ * Por omisión es `db/` dentro del proyecto, que es lo cómodo en local. En
+ * un servidor conviene apuntarlo FUERA del repositorio con DATOS_DIR: la
+ * carpeta `db/` está versionada, así que actualizar el código con `git`
+ * sobrescribiría el trabajo capturado en campo. Ya ocurrió una vez.
+ */
+const DIR_DATOS = process.env.DATOS_DIR || path.join(RAIZ, 'db');
+const DIR_SEGMENTOS = path.join(DIR_DATOS, 'segmentos');
+const ARCHIVO_INDICE = path.join(DIR_DATOS, 'indice.json');
+const ARCHIVO_RUTAS = path.join(DIR_DATOS, 'rutas.json');
 
 let indice = null;
 let rutas = null;

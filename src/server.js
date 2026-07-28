@@ -70,7 +70,8 @@ function direccionesLocales() {
 }
 
 app.listen(PUERTO, HOST, () => {
-  const indiceExiste = fs.existsSync(path.join(__dirname, '..', 'db', 'indice.json'));
+  const dirDatos = process.env.DATOS_DIR || path.join(__dirname, '..', 'db');
+  const indiceExiste = fs.existsSync(path.join(dirDatos, 'indice.json'));
   console.log(`\n  Escuelas y Rutas → http://localhost:${PUERTO}`);
   // Detrás de un proxy solo escucha en 127.0.0.1: anunciar las IPs de red
   // sería engañoso porque no responden ahí.

@@ -25,8 +25,10 @@ const { haversineKm, slug, coordenadaValida, mediana } = require('../src/util/ge
 
 const RAIZ = path.join(__dirname, '..');
 const ARCHIVO_CSV = path.join(RAIZ, 'data', 'Primarias_General.csv');
-const DIR_SEGMENTOS = path.join(RAIZ, 'db', 'segmentos');
-const ARCHIVO_INDICE = path.join(RAIZ, 'db', 'indice.json');
+// Misma carpeta de datos que usa el servidor (ver DATOS_DIR en src/db.js).
+const DIR_DATOS = process.env.DATOS_DIR || path.join(RAIZ, 'db');
+const DIR_SEGMENTOS = path.join(DIR_DATOS, 'segmentos');
+const ARCHIVO_INDICE = path.join(DIR_DATOS, 'indice.json');
 
 /** Km máximos de distancia a la mediana del municipio antes de marcar alerta. */
 const UMBRAL_KM = 30;
