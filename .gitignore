@@ -1,0 +1,20 @@
+# Dependencias (se reinstalan con npm install)
+node_modules/
+
+# Secretos: el token del DENUE nunca debe salir del equipo
+.env
+.env.local
+
+# Respaldos locales de la base (pesan 50 MB cada uno)
+db-respaldo-*/
+
+# Archivos temporales de la escritura atómica de segmentos
+db/**/*.tmp
+db/*.tmp
+
+# Configuración local de herramientas
+.claude/
+
+# Salidas de ejecución
+nohup.out
+*.log

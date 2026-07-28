@@ -1,0 +1,262 @@
+/* estilos.css — complementos sobre Tailwind (leyenda, chips, marcadores) */
+
+/* Chips de filtro por estatus */
+.chip {
+  border: 1px solid var(--c);
+  color: var(--c);
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-weight: 600;
+  opacity: 0.45;
+  transition: opacity 0.15s, background 0.15s;
+  filter: brightness(1.4);
+}
+.chip-activo { opacity: 1; background: color-mix(in srgb, var(--c) 22%, transparent); }
+.chip:focus-visible { outline: 2px solid #0891b2; outline-offset: 2px; }
+
+/* Acciones rápidas de la revisión por tanda */
+.revision-rapida {
+  border: 1px solid #31485F;
+  color: #CBD5E1;
+  background: #1B2A3A;
+  border-radius: 9999px;
+  padding: 7px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  min-height: 36px;
+  transition: background 0.15s, color 0.15s;
+}
+.revision-rapida:hover { background: #24384D; color: #fff; }
+.revision-rapida:focus-visible { outline: 2px solid #0891b2; outline-offset: 2px; }
+
+/* Puntos de la leyenda */
+.punto {
+  display: inline-block; width: 10px; height: 10px; border-radius: 9999px;
+  background: var(--c); margin-right: 4px; vertical-align: -1px;
+}
+.punto-alerta { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #dc2626; }
+.alerta-punto {
+  display: inline-block; width: 8px; height: 8px; border-radius: 9999px;
+  background: #dc2626;
+}
+
+/* Aro de la escuela seleccionada.
+   Al abrir una ficha el mapa se recentra (y en móvil se desplaza para
+   dejarla sobre la hoja): sin esta marca es fácil perder de vista cuál se
+   tocó, sobre todo en municipios con cientos de pines juntos. */
+.halo-seleccion {
+  width: 46px;
+  height: 46px;
+  border-radius: 9999px;
+  border: 3px solid #0891B2;
+  background: rgba(8, 145, 178, 0.12);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95), 0 0 14px rgba(8, 145, 178, 0.55);
+  animation: pulso-seleccion 1.8s ease-in-out infinite;
+}
+@keyframes pulso-seleccion {
+  0%, 100% { transform: scale(0.78); opacity: 1; }
+  55%      { transform: scale(1.1);  opacity: 0.6; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .halo-seleccion { animation: none; transform: scale(0.9); }
+}
+
+/* Marcador numerado de la ruta del día */
+.marcador-ruta {
+  background: #7C3AED; color: #fff; font: 700 11px/20px Archivo, sans-serif;
+  width: 20px; height: 20px; border-radius: 9999px; text-align: center;
+  box-shadow: 0 0 0 2px #fff, 0 1px 4px rgba(0,0,0,0.4);
+}
+
+/* Barra de desplazamiento discreta en la lista de ruta */
+#lista-ruta::-webkit-scrollbar { width: 6px; }
+#lista-ruta::-webkit-scrollbar-thumb { background: #31485F; border-radius: 3px; }
+
+/* Ficha: animación sutil de entrada (escritorio) */
+#panel-detalle.flex { display: flex; animation: entrar 0.18s ease-out; }
+@keyframes entrar { from { transform: translateX(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  #panel-detalle.flex { animation: none; }
+}
+
+/* Responsivo intermedio: en pantallas medianas los paneles se encogen */
+@media (min-width: 640px) and (max-width: 1100px) {
+  #col-izq { width: 280px !important; }
+  #panel-detalle { width: 320px !important; }
+}
+@media (min-width: 640px) and (max-width: 820px) {
+  #panel-detalle {
+    position: fixed; right: 0; top: 0; bottom: 0; z-index: 700;
+    box-shadow: -8px 0 24px rgba(0,0,0,0.25);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MÓVIL (< 640px, el mismo corte que el breakpoint `sm:` de Tailwind)
+
+   El mapa ocupa toda la pantalla y los tres paneles se vuelven hojas
+   superpuestas: la zona baja desde arriba, la ruta y la ficha suben
+   desde abajo. Nada roba espacio de forma permanente.
+   ══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 639px) {
+
+  /* El mapa ocupa todo; la columna izquierda deja de ser columna. */
+  #mapa { top: 0; }
+
+  /* ── Hoja superior: selección de zona ──────────────────────────────── */
+  #panel-zona {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 800;
+    padding-top: 3.5rem;               /* deja ver la barra superior */
+    max-height: 88vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform: translateY(-100%);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    border-radius: 0 0 16px 16px;
+  }
+  body.zona-abierta #panel-zona { transform: none; }
+  body.zona-abierta #chevron-zona { transform: rotate(180deg); }
+
+  /* ── Hoja inferior: ruta del día ───────────────────────────────────── */
+  #panel-ruta {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    top: auto;
+    z-index: 800;
+    height: 72vh;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.4);
+    transform: translateY(100%);
+    overscroll-behavior: contain;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  body.ruta-abierta #panel-ruta { transform: none; }
+
+  /* ── Hoja inferior: ficha de la escuela ────────────────────────────── */
+  #panel-detalle {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    top: auto;
+    width: auto !important;
+    height: 92vh;
+    z-index: 820;
+    border-left: none;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.4);
+    overscroll-behavior: contain;
+    padding-bottom: env(safe-area-inset-bottom);
+    /* La posición vertical la maneja movil.js con translateY (arrastre). */
+  }
+  /* La animación lateral de escritorio no aplica en móvil. */
+  #panel-detalle.flex { animation: none; }
+
+  /* Las transiciones se habilitan hasta después del primer pintado
+     (movil.js añade `animaciones` al body). Si estuvieran activas desde el
+     principio, la posición cerrada inicial llegaría como un cambio de
+     estilo —Tailwind CDN inyecta sus reglas de forma asíncrona— y las
+     hojas se verían entrar deslizándose al abrir la app. */
+  body.animaciones #panel-zona,
+  body.animaciones #panel-ruta,
+  body.animaciones #panel-detalle {
+    transition: transform 0.26s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  /* Mientras se arrastra, sin transición: el dedo manda. */
+  #panel-detalle.arrastrando { transition: none !important; }
+
+  /* El asa de arrastre no debe disparar el scroll del navegador. */
+  [data-arrastre], [data-arrastre-ruta] { touch-action: none; }
+
+  /* ── Objetivos táctiles cómodos (mínimo 44px) ──────────────────────── */
+  #panel-zona button,
+  #panel-ruta button,
+  #panel-detalle button,
+  #barra-movil button,
+  #fab-ruta {
+    min-height: 44px;
+  }
+  #panel-zona select,
+  #panel-detalle textarea {
+    min-height: 44px;
+  }
+  /* 16px evita que iOS haga zoom al enfocar un campo. */
+  #panel-zona select,
+  #panel-detalle textarea,
+  #panel-detalle input {
+    font-size: 16px;
+  }
+  .chip {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 16px;
+    font-size: 13px;
+  }
+  #filtros-estatus { gap: 8px; }
+  /* La casilla mide 20px: el renglón completo le da área de toque. */
+  .fila-toque { min-height: 44px; }
+
+  /* Revisión por tanda: botones cómodos para el pulgar. */
+  .revision-rapida { min-height: 44px; padding: 0 16px; }
+  #revision-lista button,
+  #revision-aplicar,
+  #revision-cerrar { min-height: 44px; }
+  /* Ocupa toda la pantalla y respeta el notch. */
+  #revision > div { padding-bottom: env(safe-area-inset-bottom); }
+
+  /* Lista de escuelas con error de ubicación. */
+  #alertas-lista button,
+  #alertas-cerrar { min-height: 44px; }
+  #alertas-buscar { min-height: 44px; font-size: 16px; } /* 16px evita el zoom de iOS */
+  #lista-alertas > div { padding-bottom: env(safe-area-inset-bottom); }
+  /* La × de cerrar y la de quitar parada necesitan área, no solo glifo. */
+  #lista-ruta .btn-quitar { min-width: 44px; }
+
+  /* ── Avisos (toast): debajo de la barra superior ───────────────────── */
+  #aviso-toast { top: 4.25rem; z-index: 830; }
+
+  /* ── Controles de Leaflet ──────────────────────────────────────────── */
+  /* El zoom no debe quedar tapado por la barra superior. */
+  .leaflet-top { top: 3.5rem; }
+  .leaflet-control-zoom a {
+    width: 40px !important;
+    height: 40px !important;
+    line-height: 40px !important;
+    font-size: 20px !important;
+  }
+  /* La atribución, discreta, sin estorbar al botón flotante. */
+  .leaflet-control-attribution {
+    font-size: 9px;
+    max-width: 58vw;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Tooltips y popups legibles, sin salirse de los bordes ─────────── */
+  .leaflet-tooltip {
+    max-width: 62vw;
+    white-space: normal;
+    font-size: 12px;
+    line-height: 1.35;
+    padding: 6px 9px;
+  }
+  .leaflet-popup-content-wrapper { max-width: 80vw; }
+  .leaflet-popup-content {
+    margin: 10px 12px;
+    font-size: 13px;
+    line-height: 1.4;
+    width: auto !important;
+  }
+}
+
+/* En pantallas de poca altura la ficha ocupa todo lo disponible. */
+@media (max-width: 639px) and (max-height: 560px) {
+  #panel-detalle { height: 96vh; }
+  #panel-ruta { height: 84vh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #panel-zona, #panel-ruta, #panel-detalle, #backdrop-movil { transition: none !important; }
+}

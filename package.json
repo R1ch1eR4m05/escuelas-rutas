@@ -1,0 +1,22 @@
+{
+  "name": "escuelas-rutas",
+  "version": "1.0.0",
+  "description": "Visualización, corrección y planeación de rutas de escuelas primarias (México)",
+  "main": "src/server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/server.js",
+    "importar": "node scripts/importar-csv.js",
+    "validar": "node scripts/validar-municipio.js",
+    "probar-denue": "node scripts/probar-denue.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "csv-parse": "^7.0.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  }
+}
