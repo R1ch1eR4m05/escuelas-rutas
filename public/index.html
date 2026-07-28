@@ -54,6 +54,17 @@
   <!-- Fondo oscuro tras las hojas desplegadas (solo móvil) -->
   <div id="backdrop-movil" class="sm:hidden fixed inset-0 z-[790] bg-black/45 opacity-0 pointer-events-none transition-opacity duration-200"></div>
 
+  <!-- Aviso cuando se publica sin backend (GitHub Pages): la app es de solo
+       consulta y los cambios viven únicamente en este navegador. -->
+  <div id="aviso-estatico" class="hidden fixed bottom-0 inset-x-0 z-[850] bg-amber-500 text-tinta-900 px-4 py-2 text-[11px] sm:text-xs font-semibold flex items-center gap-3 shadow-lg">
+    <span class="flex-1 leading-snug">
+      Vista de demostración: los cambios de estatus y notas se guardan solo en este navegador,
+      y la corrección con INEGI está deshabilitada porque requiere el servidor.
+    </span>
+    <button id="aviso-estatico-cerrar" aria-label="Ocultar aviso"
+      class="shrink-0 text-tinta-900/70 hover:text-tinta-900 text-xl leading-none px-2">×</button>
+  </div>
+
   <div class="flex h-full">
 
     <!-- ══ Columna izquierda (escritorio) / hojas independientes (móvil) ══

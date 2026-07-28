@@ -107,7 +107,9 @@ const Panel = (() => {
               ${enRuta ? 'bg-violet-100 text-violet-700 hover:bg-violet-200' : 'bg-violet-600 text-white hover:bg-violet-500'}">
               ${enRuta ? 'Quitar de la ruta del día' : 'Agregar a ruta del día'}
             </button>
-            <button id="btn-denue" class="w-full rounded-md border border-accion-600 text-accion-600 hover:bg-cyan-50 text-sm font-semibold py-2 transition">
+            <button id="btn-denue" ${Api.modo === 'estatico' ? 'disabled' : ''}
+              title="${Api.modo === 'estatico' ? 'Requiere el servidor: no disponible en esta vista de demostración' : ''}"
+              class="w-full rounded-md border border-accion-600 text-accion-600 hover:bg-cyan-50 text-sm font-semibold py-2 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent">
               Validar / Corregir ubicación con INEGI
             </button>
           </div>

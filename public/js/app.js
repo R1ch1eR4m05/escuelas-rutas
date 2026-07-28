@@ -23,6 +23,24 @@ const App = (() => {
     temporizadorToast = setTimeout(() => toast.classList.add('hidden'), 2600);
   }
 
+  // ── Modo sin backend (publicación estática) ───────────────────────────
+  // Sin servidor no hay token del INEGI ni escritura en disco: se avisa y
+  // se deshabilita lo que no puede funcionar, en vez de dejar botones que
+  // fallan al tocarlos.
+  let modoEstatico = false;
+
+  document.addEventListener('api:modo', (ev) => {
+    modoEstatico = ev.detail === 'estatico';
+    if (!modoEstatico) return;
+
+    const aviso = document.getElementById('aviso-estatico');
+    aviso.classList.remove('hidden');
+    document.getElementById('aviso-estatico-cerrar').onclick = () => aviso.classList.add('hidden');
+
+    btnValidar.disabled = true;
+    btnValidar.title = 'Requiere el servidor: no disponible en esta vista de demostración';
+  });
+
   // ── Selectores de zona ────────────────────────────────────────────────
   async function cargarEstados() {
     try {
@@ -58,7 +76,7 @@ const App = (() => {
       resumenZona.textContent =
         `${seg.escuelas.length.toLocaleString('es-MX')} escuelas en ${seg.municipio}` +
         (conAlerta ? ` · ${conAlerta} con alerta de ubicación` : '');
-      btnValidar.disabled = conAlerta === 0;
+      btnValidar.disabled = modoEstatico || conAlerta === 0;
     } catch (err) {
       aviso(err.message, true);
     }
