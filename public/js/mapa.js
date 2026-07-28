@@ -124,25 +124,47 @@ const Mapa = (() => {
     if (escuela.id === idSeleccionada) seleccionar(escuela);
   }
 
-  /** Dibuja los números de parada y la polilínea de la ruta del día. */
+  /**
+   * Dibuja TODAS las rutas del municipio, cada una con su color.
+   *
+   * Los equipos trabajan en paralelo, así que ver ambas rutas a la vez
+   * ayuda a repartir la zona sin encimarse. La ruta activa se resalta y las
+   * demás quedan atenuadas para no competir visualmente.
+   */
   function dibujarRuta() {
     capaRuta.clearLayers();
-    const orden = Ruta.ordenar(Estado.escuelasDeRuta());
-    orden.forEach((e, i) => {
-      const icono = L.divIcon({
-        className: '',
-        html: `<div class="marcador-ruta">${i + 1}</div>`,
-        iconSize: [20, 20],
-        iconAnchor: [10, 24],
+
+    for (const ruta of Estado.rutas) {
+      const orden = Ruta.ordenar(Estado.escuelasDeRuta(ruta));
+      if (!orden.length) continue;
+
+      const activa = ruta.id === Estado.rutaActivaId;
+      const color = ruta.color || '#7C3AED';
+
+      orden.forEach((e, i) => {
+        const icono = L.divIcon({
+          className: '',
+          html: `<div class="marcador-ruta" style="background:${color};opacity:${activa ? 1 : 0.55}">${i + 1}</div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 24],
+        });
+        capaRuta.addLayer(L.marker([e.lat, e.lng], {
+          icon: icono,
+          interactive: false,
+          zIndexOffset: activa ? 500 : 0,
+        }));
       });
-      capaRuta.addLayer(L.marker([e.lat, e.lng], { icon: icono, interactive: false }));
-    });
-    if (orden.length >= 2) {
-      capaRuta.addLayer(
-        L.polyline(orden.map((e) => [e.lat, e.lng]), {
-          color: '#7C3AED', weight: 2.5, dashArray: '6 6', opacity: 0.8,
-        })
-      );
+
+      if (orden.length >= 2) {
+        capaRuta.addLayer(
+          L.polyline(orden.map((e) => [e.lat, e.lng]), {
+            color,
+            weight: activa ? 3 : 2,
+            dashArray: '6 6',
+            opacity: activa ? 0.85 : 0.4,
+          })
+        );
+      }
     }
   }
 
@@ -207,6 +229,7 @@ const Mapa = (() => {
   document.addEventListener('filtros:cambiados', dibujarEscuelas);
   document.addEventListener('escuela:cambiada', (ev) => refrescarEscuela(ev.detail));
   document.addEventListener('ruta:cambiada', dibujarRuta);
+  document.addEventListener('rutas:cambiadas', dibujarRuta);
 
   return { iniciar, centrarEn, invalidar, seleccionar, limpiarSeleccion };
 })();

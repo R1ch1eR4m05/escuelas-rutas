@@ -12,6 +12,11 @@ db-respaldo-*/
 db/**/*.tmp
 db/*.tmp
 
+# Rutas del día: son datos vivos de cada instalación (los equipos las crean
+# y modifican a diario). Si se versionaran, cada actualización del servidor
+# las sobrescribiría con las del repositorio.
+db/rutas.json
+
 # Configuración local de herramientas
 .claude/
 

@@ -10,6 +10,7 @@ const express = require('express');
 
 const rutasEscuelas = require('./rutas/escuelas');
 const rutasDenue = require('./rutas/denue');
+const rutasDia = require('./rutas/rutas-dia');
 
 const app = express();
 const PUERTO = process.env.PUERTO || process.env.PORT || 3000;
@@ -28,6 +29,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.use('/api', rutasEscuelas);
 app.use('/api', rutasDenue);
+app.use('/api', rutasDia);
 
 // Manejador de errores central (incluye el caso "falta importar").
 app.use((err, _req, res, _next) => {

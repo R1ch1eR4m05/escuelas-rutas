@@ -16,7 +16,8 @@ const Estado = {
   porId: new Map(),        // id → escuela
   filtros: new Set(['sin_visitar', 'pendiente', 'visitada', 'descartada']),
   soloAlertas: false,
-  ruta: [],                // ids de escuelas en la ruta del día (en orden)
+  rutas: [],               // rutas del municipio activo (una por equipo)
+  rutaActivaId: null,      // a cuál se agregan las paradas
 
   COLORES: {
     sin_visitar: '#64748B',
@@ -107,9 +108,9 @@ const Estado = {
     this.municipioSlug = municipioSlug;
     this.escuelas = segmento.escuelas;
     this.porId = new Map(segmento.escuelas.map((e) => [e.id, e]));
-    this.ruta = this.ruta.filter((id) => this.porId.has(id)); // la ruta solo vive dentro de la zona
     this.emitir('zona:cargada', segmento);
-    this.emitir('ruta:cambiada');
+    // Las rutas son de este municipio y viven en el servidor.
+    this.cargarRutas();
   },
 
   /** ¿La escuela pasa los filtros activos? */
@@ -125,27 +126,122 @@ const Estado = {
     this.emitir('escuela:cambiada', e || escuelaActualizada);
   },
 
-  // ── Ruta del día ──────────────────────────────────────────────────────
+  // ── Rutas del día ─────────────────────────────────────────────────────
+  //
+  // Un municipio puede tener varias rutas a la vez (una por equipo de
+  // campo). Todas se guardan en el servidor, así que persisten y las ven
+  // todos los equipos. `rutaActiva` es a la que se agregan las paradas.
+
+  /** La ruta activa, o null si la zona no tiene ninguna. */
+  get rutaActiva() {
+    return this.rutas.find((r) => r.id === this.rutaActivaId) || null;
+  },
+
+  /** Ids de escuelas de la ruta activa (vacío si no hay ruta). */
+  get ruta() {
+    return this.rutaActiva?.escuelas || [];
+  },
+
+  /** Carga las rutas de la zona activa y elige cuál queda seleccionada. */
+  async cargarRutas() {
+    try {
+      this.rutas = await Api.rutas(this.estadoSlug, this.municipioSlug);
+    } catch {
+      this.rutas = [];
+    }
+    // Las paradas que ya no existan en la zona se descartan al vuelo.
+    for (const r of this.rutas) r.escuelas = r.escuelas.filter((id) => this.porId.has(id));
+    if (!this.rutas.some((r) => r.id === this.rutaActivaId)) {
+      this.rutaActivaId = this.rutas[0]?.id || null;
+    }
+    this.emitir('rutas:cambiadas');
+    this.emitir('ruta:cambiada');
+  },
+
+  seleccionarRuta(id) {
+    if (this.rutaActivaId === id) return;
+    this.rutaActivaId = id;
+    this.emitir('rutas:cambiadas');
+    this.emitir('ruta:cambiada');
+  },
+
+  async crearRuta(nombre) {
+    const ruta = await Api.crearRuta(this.estadoSlug, this.municipioSlug, nombre);
+    this.rutas.push(ruta);
+    this.rutaActivaId = ruta.id;
+    this.emitir('rutas:cambiadas');
+    this.emitir('ruta:cambiada');
+    return ruta;
+  },
+
+  async renombrarRuta(id, nombre) {
+    const ruta = this.rutas.find((r) => r.id === id);
+    if (!ruta) return;
+    const actualizada = await Api.actualizarRuta(id, { nombre });
+    Object.assign(ruta, actualizada);
+    this.emitir('rutas:cambiadas');
+  },
+
+  async eliminarRuta(id) {
+    await Api.eliminarRuta(id);
+    this.rutas = this.rutas.filter((r) => r.id !== id);
+    if (this.rutaActivaId === id) this.rutaActivaId = this.rutas[0]?.id || null;
+    this.emitir('rutas:cambiadas');
+    this.emitir('ruta:cambiada');
+  },
+
+  /** Guarda las paradas de la ruta activa en el servidor. */
+  async guardarParadas() {
+    const ruta = this.rutaActiva;
+    if (!ruta) return;
+    try {
+      await Api.actualizarRuta(ruta.id, { escuelas: ruta.escuelas });
+    } catch (err) {
+      if (window.App) App.aviso(`No se pudo guardar la ruta: ${err.message}`, true);
+    }
+  },
+
   enRuta(id) { return this.ruta.includes(id); },
 
+  /** Agrega o quita una parada de la ruta activa. */
   alternarEnRuta(id) {
-    const i = this.ruta.indexOf(id);
-    if (i >= 0) this.ruta.splice(i, 1);
-    else this.ruta.push(id);
+    const ruta = this.rutaActiva;
+    if (!ruta) return false; // sin ruta activa no hay dónde ponerla
+    const i = ruta.escuelas.indexOf(id);
+    if (i >= 0) ruta.escuelas.splice(i, 1);
+    else ruta.escuelas.push(id);
     this.emitir('ruta:cambiada');
+    this.guardarParadas();
+    return true;
   },
 
   quitarDeRuta(id) {
-    this.ruta = this.ruta.filter((x) => x !== id);
+    const ruta = this.rutaActiva;
+    if (!ruta) return;
+    ruta.escuelas = ruta.escuelas.filter((x) => x !== id);
     this.emitir('ruta:cambiada');
+    this.guardarParadas();
   },
 
   limpiarRuta() {
-    this.ruta = [];
+    const ruta = this.rutaActiva;
+    if (!ruta) return;
+    ruta.escuelas = [];
     this.emitir('ruta:cambiada');
+    this.guardarParadas();
   },
 
-  escuelasDeRuta() {
-    return this.ruta.map((id) => this.porId.get(id)).filter(Boolean);
+  /** Reemplaza el orden de las paradas de la ruta activa. */
+  ordenarRuta(ids) {
+    const ruta = this.rutaActiva;
+    if (!ruta) return;
+    ruta.escuelas = ids;
+    this.emitir('ruta:cambiada');
+    this.guardarParadas();
+  },
+
+  escuelasDeRuta(ruta = this.rutaActiva) {
+    if (!ruta) return [];
+    return ruta.escuelas.map((id) => this.porId.get(id)).filter(Boolean);
   },
 };

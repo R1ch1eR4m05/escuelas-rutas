@@ -128,7 +128,14 @@ El layout de tres columnas no cabe en una pantalla angosta, así que por debajo 
 
 Para abrirla desde el teléfono, `npm start` imprime la dirección de red local (misma Wi-Fi).
 
-### 4. Ruta del día + Google Maps
+### 4. Rutas del día + Google Maps
+
+**Varias rutas a la vez.** Cada equipo de campo lleva la suya: con **«+ Agregar nueva ruta»** se crean las que hagan falta y se cambia entre ellas con las pestañas de colores. Las paradas se agregan siempre a la ruta seleccionada, y cada ruta guarda las suyas por separado.
+
+Se guardan **en el servidor**, no en el navegador: persisten al recargar y todos los equipos ven las mismas. Doble clic sobre una pestaña la renombra. En el mapa se dibujan todas a la vez —cada una con su color, la activa resaltada— para repartir la zona sin encimarse.
+
+Viven en `db/rutas.json`, que **no se versiona**: son datos de operación de cada instalación, así que actualizar el servidor no los pisa.
+
 
 - Botón "Agregar a ruta del día" en cada ficha; las paradas aparecen numeradas en el mapa y en la bandeja lateral.
 - **Orden recomendado**: vecino más cercano + mejora 2-opt (en la prueba de ejemplo redujo un recorrido de 32.4 km a 19.8 km).
@@ -149,6 +156,10 @@ Para abrirla desde el teléfono, `npm start` imprime la dirección de red local 
 | POST | `/api/denue/validar` | Candidatos de ubicación para una escuela (requiere token) |
 | POST | `/api/denue/validar-municipio` | Validación masiva del municipio; `aplicar:false` solo simula |
 | POST | `/api/denue/aplicar-correcciones` | Escribe una tanda de correcciones ya revisadas a mano |
+| GET | `/api/rutas/:estado/:municipio` | Rutas del día de esa zona |
+| POST | `/api/rutas` | Crea una ruta (`{nombre, estado, municipio}`) |
+| PATCH | `/api/rutas/:id` | Renombra o cambia sus paradas |
+| DELETE | `/api/rutas/:id` | Elimina una ruta |
 
 Los slugs no llevan acentos: `michoacan-de-ocampo/morelia`. El `:id` es `CCT-turno`, p. ej. `16DPR4233O-matutino`.
 

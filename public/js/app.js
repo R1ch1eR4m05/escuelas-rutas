@@ -166,26 +166,76 @@ const App = (() => {
     Estado.emitir('filtros:cambiados');
   });
 
-  // ── Bandeja "Ruta del día" ────────────────────────────────────────────
+  // ── Rutas del día ─────────────────────────────────────────────────────
+  const selectorRutas = document.getElementById('selector-rutas');
+  const btnNuevaRuta = document.getElementById('btn-nueva-ruta');
+  const btnEliminarRuta = document.getElementById('btn-eliminar-ruta');
+  const rutaAyuda = document.getElementById('ruta-ayuda');
+
+  function esc(t) {
+    return String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  }
+
+  /** Pestañas de rutas: cada equipo trabaja sobre la suya. */
+  function pintarSelectorRutas() {
+    if (!Estado.rutas.length) {
+      selectorRutas.innerHTML = '<p class="text-[11px] text-slate-500 italic">Sin rutas todavía. Crea una para empezar a agregar paradas.</p>';
+      btnEliminarRuta.classList.add('hidden');
+      return;
+    }
+    btnEliminarRuta.classList.remove('hidden');
+
+    selectorRutas.innerHTML = Estado.rutas.map((r) => {
+      const activa = r.id === Estado.rutaActivaId;
+      return `
+        <button data-ruta="${esc(r.id)}"
+          class="pestana-ruta ${activa ? 'pestana-ruta-activa' : ''}"
+          style="--c:${esc(r.color)}"
+          title="${activa ? 'Doble clic para renombrar' : 'Cambiar a esta ruta'}">
+          <span class="punto-ruta"></span>${esc(r.nombre)}
+          <span class="opacity-60">(${r.escuelas.length})</span>
+        </button>`;
+    }).join('');
+
+    selectorRutas.querySelectorAll('.pestana-ruta').forEach((b) => {
+      b.onclick = () => Estado.seleccionarRuta(b.dataset.ruta);
+      // Doble clic sobre la activa para renombrarla.
+      b.ondblclick = () => {
+        const r = Estado.rutas.find((x) => x.id === b.dataset.ruta);
+        if (!r) return;
+        const nombre = prompt('Nombre de la ruta:', r.nombre);
+        if (nombre && nombre.trim()) Estado.renombrarRuta(r.id, nombre.trim());
+      };
+    });
+  }
+
   function pintarRuta() {
+    const hayRuta = Boolean(Estado.rutaActiva);
     const orden = Ruta.ordenar(Estado.escuelasDeRuta());
     const etiqueta = `${orden.length} parada${orden.length === 1 ? '' : 's'}`;
     rutaConteo.textContent = etiqueta;
-    // Mismo conteo en el botón flotante de móvil.
+
+    // El botón flotante de móvil muestra la ruta activa y su conteo.
     const fabConteo = document.getElementById('fab-conteo');
     if (fabConteo) fabConteo.textContent = etiqueta;
+    const fabNombre = document.getElementById('fab-nombre');
+    if (fabNombre) fabNombre.textContent = Estado.rutaActiva?.nombre || 'Rutas';
+
+    rutaAyuda.textContent = hayRuta
+      ? 'Toca «Agregar a ruta» dentro de la ficha de cada escuela. El orden se optimiza por cercanía.'
+      : 'Crea una ruta por equipo de trabajo. Cada una se guarda por separado.';
 
     listaRuta.innerHTML = orden.length
       ? orden.map((e, i) => `
         <li class="flex items-center gap-2.5 bg-tinta-700 rounded-lg px-3 py-2">
-          <span class="marcador-ruta shrink-0">${i + 1}</span>
+          <span class="marcador-ruta shrink-0" style="background:${esc(Estado.rutaActiva?.color || '#7C3AED')}">${i + 1}</span>
           <div class="min-w-0 flex-1">
-            <p class="text-xs font-semibold truncate">${e.nombre}</p>
-            <p class="text-[10px] text-slate-400">${e.alumnos.toLocaleString('es-MX')} alumnos · ${e.turno.toLowerCase()}</p>
+            <p class="text-xs font-semibold truncate">${esc(e.nombre)}</p>
+            <p class="text-[10px] text-slate-400">${e.alumnos.toLocaleString('es-MX')} alumnos · ${esc(e.turno.toLowerCase())}</p>
           </div>
-          <button data-id="${e.id}" class="btn-quitar text-slate-400 hover:text-red-400 text-lg leading-none shrink-0" aria-label="Quitar de la ruta">×</button>
+          <button data-id="${esc(e.id)}" class="btn-quitar text-slate-400 hover:text-red-400 text-lg leading-none shrink-0" aria-label="Quitar de la ruta">×</button>
         </li>`).join('')
-      : '<li class="text-[11px] text-slate-500 italic">Aún no hay paradas.</li>';
+      : `<li class="text-[11px] text-slate-500 italic">${hayRuta ? 'Aún no hay paradas en esta ruta.' : ''}</li>`;
 
     listaRuta.querySelectorAll('.btn-quitar').forEach((b) => {
       b.onclick = () => Estado.quitarDeRuta(b.dataset.id);
@@ -197,17 +247,41 @@ const App = (() => {
 
     btnOptimizar.disabled = orden.length < 3;
     btnGoogle.disabled = orden.length < 2;
+    btnLimpiar.disabled = !orden.length;
 
     if (orden.length > Ruta.MAX_PUNTOS) {
       rutaDistancia.textContent += ` · Google Maps solo admite ${Ruta.MAX_PUNTOS} puntos: se abrirán las primeras ${Ruta.MAX_PUNTOS} paradas.`;
     }
   }
 
+  btnNuevaRuta.addEventListener('click', async () => {
+    if (!Estado.municipioSlug) return aviso('Elige primero un municipio', true);
+    const sugerido = `Equipo ${Estado.rutas.length + 1}`;
+    const nombre = prompt('Nombre de la nueva ruta (por ejemplo, el equipo que la recorre):', sugerido);
+    if (nombre === null) return; // canceló
+    try {
+      const ruta = await Estado.crearRuta(nombre.trim() || sugerido);
+      aviso(`Ruta «${ruta.nombre}» creada`);
+    } catch (err) {
+      aviso(err.message, true);
+    }
+  });
+
+  btnEliminarRuta.addEventListener('click', async () => {
+    const ruta = Estado.rutaActiva;
+    if (!ruta) return;
+    if (!confirm(`¿Eliminar la ruta «${ruta.nombre}» con sus ${ruta.escuelas.length} paradas?`)) return;
+    try {
+      await Estado.eliminarRuta(ruta.id);
+      aviso('Ruta eliminada');
+    } catch (err) {
+      aviso(err.message, true);
+    }
+  });
+
   btnOptimizar.addEventListener('click', () => {
-    // Reordena el arreglo de ids según el orden optimizado y refresca todo.
     const orden = Ruta.ordenar(Estado.escuelasDeRuta());
-    Estado.ruta = orden.map((e) => e.id);
-    Estado.emitir('ruta:cambiada');
+    Estado.ordenarRuta(orden.map((e) => e.id));
     aviso('Ruta reordenada por cercanía');
   });
 
@@ -225,10 +299,12 @@ const App = (() => {
   });
   selMunicipio.addEventListener('change', () => { reiniciarBotonLote(); cargarZona(); });
   document.addEventListener('ruta:cambiada', pintarRuta);
+  document.addEventListener('rutas:cambiadas', () => { pintarSelectorRutas(); pintarRuta(); });
 
   // ── Arranque ──────────────────────────────────────────────────────────
   Mapa.iniciar();
   cargarEstados();
+  pintarSelectorRutas();
   pintarRuta();
 
   return { aviso };

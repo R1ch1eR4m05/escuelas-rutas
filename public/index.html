@@ -141,13 +141,23 @@
         </div>
 
         <div class="px-5 pt-4 pb-2 flex items-center justify-between shrink-0">
-          <h2 class="text-sm font-bold">Ruta del día</h2>
+          <h2 class="text-sm font-bold">Rutas del día</h2>
           <div class="flex items-center gap-2">
             <span id="ruta-conteo" class="text-[11px] px-2 py-0.5 rounded-full bg-tinta-700 text-slate-300">0 paradas</span>
-            <button id="btn-cerrar-ruta" class="sm:hidden text-slate-400 text-2xl leading-none px-2" aria-label="Cerrar ruta del día">×</button>
+            <button id="btn-cerrar-ruta" class="sm:hidden text-slate-400 text-2xl leading-none px-2" aria-label="Cerrar rutas del día">×</button>
           </div>
         </div>
-        <p class="px-5 text-[11px] text-slate-400 leading-relaxed shrink-0">Toca «Agregar a ruta» dentro de la ficha de cada escuela. El orden se optimiza por cercanía.</p>
+
+        <!-- Una ruta por equipo de campo: se trabaja sobre la seleccionada -->
+        <div class="px-5 pb-2 shrink-0">
+          <div id="selector-rutas" class="flex flex-wrap gap-1.5"></div>
+          <button id="btn-nueva-ruta"
+            class="mt-2 w-full rounded-md border border-dashed border-tinta-600 text-slate-300 hover:border-accion-600 hover:text-accion-500 text-xs font-semibold py-2 transition">
+            + Agregar nueva ruta
+          </button>
+        </div>
+
+        <p id="ruta-ayuda" class="px-5 text-[11px] text-slate-400 leading-relaxed shrink-0">Toca «Agregar a ruta» dentro de la ficha de cada escuela. El orden se optimiza por cercanía.</p>
 
         <ol id="lista-ruta" class="flex-1 overflow-y-auto px-5 py-3 space-y-2"></ol>
 
@@ -155,7 +165,10 @@
           <p id="ruta-distancia" class="text-[11px] text-slate-400"></p>
           <button id="btn-optimizar" class="w-full rounded-md bg-tinta-700 hover:bg-tinta-600 text-sm py-2 font-semibold transition disabled:opacity-40" disabled>Reordenar por cercanía</button>
           <button id="btn-google-maps" class="w-full rounded-md bg-accion-600 hover:bg-accion-500 text-sm py-2 font-semibold transition disabled:opacity-40" disabled>Abrir ruta en Google Maps ↗</button>
-          <button id="btn-limpiar-ruta" class="w-full text-[11px] text-slate-400 hover:text-slate-200 transition">Vaciar ruta</button>
+          <div class="flex gap-2">
+            <button id="btn-limpiar-ruta" class="flex-1 text-[11px] text-slate-400 hover:text-slate-200 transition">Vaciar paradas</button>
+            <button id="btn-eliminar-ruta" class="flex-1 text-[11px] text-red-400/80 hover:text-red-300 transition">Eliminar ruta</button>
+          </div>
         </div>
       </div>
     </aside>
@@ -196,8 +209,8 @@
   <button id="fab-ruta" class="sm:hidden fixed right-4 bottom-6 z-[780] h-14 pl-4 pr-5 rounded-full bg-violet-600 text-white shadow-xl flex items-center gap-2.5 active:bg-violet-700 transition"
     aria-label="Abrir la ruta del día">
     <span class="text-lg leading-none" aria-hidden="true">🚩</span>
-    <span class="text-left leading-tight">
-      <span class="block text-[10px] uppercase tracking-wider text-violet-200">Ruta</span>
+    <span class="text-left leading-tight max-w-[9rem]">
+      <span id="fab-nombre" class="block text-[10px] uppercase tracking-wider text-violet-200 truncate">Rutas</span>
       <span id="fab-conteo" class="block text-sm font-bold">0 paradas</span>
     </span>
   </button>

@@ -105,7 +105,9 @@ const Panel = (() => {
           <div class="pt-1 space-y-2">
             <button id="btn-ruta" class="w-full rounded-md text-sm font-semibold py-2 transition
               ${enRuta ? 'bg-violet-100 text-violet-700 hover:bg-violet-200' : 'bg-violet-600 text-white hover:bg-violet-500'}">
-              ${enRuta ? 'Quitar de la ruta del día' : 'Agregar a ruta del día'}
+              ${enRuta
+                ? `Quitar de «${esc(Estado.rutaActiva?.nombre || 'la ruta')}»`
+                : `Agregar a «${esc(Estado.rutaActiva?.nombre || 'ruta del día')}»`}
             </button>
             <button id="btn-denue" ${Api.modo === 'estatico' ? 'disabled' : ''}
               title="${Api.modo === 'estatico' ? 'Requiere el servidor: no disponible en esta vista de demostración' : ''}"
@@ -130,7 +132,12 @@ const Panel = (() => {
     };
 
     cont.querySelector('#btn-ruta').onclick = () => {
-      Estado.alternarEnRuta(e.id);
+      // Sin ruta activa no hay dónde poner la parada: se avisa en vez de
+      // que el botón no haga nada.
+      if (!Estado.alternarEnRuta(e.id)) {
+        App.aviso('Primero crea una ruta con «+ Agregar nueva ruta»', true);
+        return;
+      }
       render(Estado.porId.get(e.id));
     };
 

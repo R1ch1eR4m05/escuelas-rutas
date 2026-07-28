@@ -12,9 +12,14 @@ const { slug } = require('./util/geo');
 const RAIZ = path.join(__dirname, '..');
 const DIR_SEGMENTOS = path.join(RAIZ, 'db', 'segmentos');
 const ARCHIVO_INDICE = path.join(RAIZ, 'db', 'indice.json');
+const ARCHIVO_RUTAS = path.join(RAIZ, 'db', 'rutas.json');
 
 let indice = null;
+let rutas = null;
 const cacheSegmentos = new Map(); // "eSlug/mSlug" → objeto segmento
+
+/** Colores para distinguir las rutas en el mapa. */
+const COLORES_RUTA = ['#7C3AED', '#EA580C', '#0891B2', '#16A34A', '#DB2777', '#CA8A04'];
 
 /** Carga (una vez) el índice generado por scripts/importar-csv.js. */
 function obtenerIndice() {
@@ -101,4 +106,80 @@ function refrescarConteoAlertas(eSlug, mSlug) {
   return alertas;
 }
 
-module.exports = { obtenerIndice, obtenerSegmento, actualizarEscuela, refrescarConteoAlertas, slug };
+// ── Rutas del día ───────────────────────────────────────────────────────
+//
+// Varios equipos trabajan en paralelo, cada uno con su propia ruta. Se
+// guardan en el servidor (no en el navegador) para que todos vean lo mismo
+// y no se pierdan al recargar. Van en su propio archivo: son datos de
+// planeación, no del catálogo de escuelas.
+
+function cargarRutas() {
+  if (rutas) return rutas;
+  try {
+    rutas = JSON.parse(fs.readFileSync(ARCHIVO_RUTAS, 'utf8'));
+    if (!Array.isArray(rutas.rutas)) rutas = { rutas: [] };
+  } catch {
+    rutas = { rutas: [] }; // aún no existe: se crea al guardar
+  }
+  return rutas;
+}
+
+function guardarRutas() {
+  rutas.actualizado = new Date().toISOString();
+  const tmp = `${ARCHIVO_RUTAS}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(rutas, null, 2));
+  fs.renameSync(tmp, ARCHIVO_RUTAS);
+}
+
+/** Rutas de un municipio, en el orden en que se crearon. */
+function rutasDeZona(eSlug, mSlug) {
+  return cargarRutas().rutas.filter((r) => r.estado === eSlug && r.municipio === mSlug);
+}
+
+function crearRuta({ nombre, estado, municipio }) {
+  cargarRutas();
+  const deZona = rutasDeZona(estado, municipio);
+  const ruta = {
+    id: `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+    nombre: String(nombre || `Ruta ${deZona.length + 1}`).slice(0, 60).trim() || `Ruta ${deZona.length + 1}`,
+    color: COLORES_RUTA[deZona.length % COLORES_RUTA.length],
+    estado, municipio,
+    escuelas: [],
+    creada: new Date().toISOString(),
+  };
+  rutas.rutas.push(ruta);
+  guardarRutas();
+  return ruta;
+}
+
+function actualizarRuta(id, cambios) {
+  cargarRutas();
+  const ruta = rutas.rutas.find((r) => r.id === id);
+  if (!ruta) return null;
+  if (cambios.nombre !== undefined) {
+    const limpio = String(cambios.nombre).slice(0, 60).trim();
+    if (limpio) ruta.nombre = limpio;
+  }
+  if (Array.isArray(cambios.escuelas)) {
+    ruta.escuelas = cambios.escuelas.map(String).slice(0, 500);
+  }
+  if (cambios.color !== undefined && /^#[0-9A-Fa-f]{6}$/.test(cambios.color)) {
+    ruta.color = cambios.color;
+  }
+  guardarRutas();
+  return ruta;
+}
+
+function eliminarRuta(id) {
+  cargarRutas();
+  const antes = rutas.rutas.length;
+  rutas.rutas = rutas.rutas.filter((r) => r.id !== id);
+  if (rutas.rutas.length === antes) return false;
+  guardarRutas();
+  return true;
+}
+
+module.exports = {
+  obtenerIndice, obtenerSegmento, actualizarEscuela, refrescarConteoAlertas, slug,
+  rutasDeZona, crearRuta, actualizarRuta, eliminarRuta, COLORES_RUTA,
+};

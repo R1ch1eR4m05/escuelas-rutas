@@ -116,6 +116,21 @@ const Api = (() => {
 
   const SIN_BACKEND = 'Esta es una vista de solo consulta: la corrección con INEGI necesita el servidor.';
 
+  // ── Rutas del día sin servidor ──────────────────────────────────────────
+  // En la demo estática viven en este navegador; con servidor son
+  // compartidas entre todos los equipos.
+  const LLAVE_RUTAS = 'escuelas-rutas:rutas';
+  const COLORES_RUTA = ['#7C3AED', '#EA580C', '#0891B2', '#16A34A', '#DB2777', '#CA8A04'];
+
+  function rutasLocales() {
+    try { return JSON.parse(localStorage.getItem(LLAVE_RUTAS) || '[]'); }
+    catch { return []; }
+  }
+
+  function guardarRutasLocales(lista) {
+    try { localStorage.setItem(LLAVE_RUTAS, JSON.stringify(lista)); } catch { /* sin espacio */ }
+  }
+
   // ── API pública ─────────────────────────────────────────────────────────
   return {
     /** 'servidor' | 'estatico' | null si aún no se detecta. */
@@ -153,6 +168,57 @@ const Api = (() => {
       const actualizada = { ...escuela, ...cambios };
       if ('lat' in cambios || 'lng' in cambios) actualizada.alertas = [];
       return actualizada;
+    },
+
+    // ── Rutas del día ─────────────────────────────────────────────────────
+    async rutas(estadoSlug, municipioSlug) {
+      if ((await detectar()) === 'servidor') return pedir(`api/rutas/${estadoSlug}/${municipioSlug}`);
+      return rutasLocales().filter((r) => r.estado === estadoSlug && r.municipio === municipioSlug);
+    },
+
+    async crearRuta(estadoSlug, municipioSlug, nombre) {
+      if ((await detectar()) === 'servidor') {
+        return pedir('api/rutas', {
+          method: 'POST',
+          body: JSON.stringify({ nombre, estado: estadoSlug, municipio: municipioSlug }),
+        });
+      }
+      const lista = rutasLocales();
+      const deZona = lista.filter((r) => r.estado === estadoSlug && r.municipio === municipioSlug);
+      const ruta = {
+        id: `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+        nombre: String(nombre || `Ruta ${deZona.length + 1}`).slice(0, 60),
+        color: COLORES_RUTA[deZona.length % COLORES_RUTA.length],
+        estado: estadoSlug, municipio: municipioSlug,
+        escuelas: [], creada: new Date().toISOString(),
+      };
+      lista.push(ruta);
+      guardarRutasLocales(lista);
+      return ruta;
+    },
+
+    async actualizarRuta(id, cambios) {
+      if ((await detectar()) === 'servidor') {
+        return pedir(`api/rutas/${id}`, { method: 'PATCH', body: JSON.stringify(cambios) });
+      }
+      const lista = rutasLocales();
+      const ruta = lista.find((r) => r.id === id);
+      if (!ruta) throw new Error('Ruta no encontrada');
+      if (cambios.nombre !== undefined) {
+        const limpio = String(cambios.nombre).slice(0, 60).trim();
+        if (limpio) ruta.nombre = limpio;
+      }
+      if (Array.isArray(cambios.escuelas)) ruta.escuelas = cambios.escuelas;
+      guardarRutasLocales(lista);
+      return ruta;
+    },
+
+    async eliminarRuta(id) {
+      if ((await detectar()) === 'servidor') {
+        return pedir(`api/rutas/${id}`, { method: 'DELETE' });
+      }
+      guardarRutasLocales(rutasLocales().filter((r) => r.id !== id));
+      return { eliminada: true };
     },
 
     async validarMunicipio(estadoSlug, municipioSlug, aplicar) {

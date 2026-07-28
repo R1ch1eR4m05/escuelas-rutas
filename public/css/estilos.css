@@ -71,11 +71,41 @@
   .halo-seleccion { animation: none; transform: scale(0.9); }
 }
 
-/* Marcador numerado de la ruta del día */
+/* Marcador numerado de la ruta del día (el color lo pone cada ruta) */
 .marcador-ruta {
   background: #7C3AED; color: #fff; font: 700 11px/20px Archivo, sans-serif;
   width: 20px; height: 20px; border-radius: 9999px; text-align: center;
   box-shadow: 0 0 0 2px #fff, 0 1px 4px rgba(0,0,0,0.4);
+}
+
+/* Pestañas para elegir entre las rutas del municipio */
+.pestana-ruta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #31485F;
+  background: #24384D;
+  color: #CBD5E1;
+  border-radius: 9999px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  max-width: 100%;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.pestana-ruta:hover { border-color: var(--c); color: #fff; }
+.pestana-ruta-activa {
+  border-color: var(--c);
+  background: color-mix(in srgb, var(--c) 26%, #1B2A3A);
+  color: #fff;
+}
+.pestana-ruta:focus-visible { outline: 2px solid #0891b2; outline-offset: 2px; }
+
+/* Punto de color que identifica cada ruta */
+.punto-ruta {
+  width: 9px; height: 9px; border-radius: 9999px;
+  background: var(--c); flex-shrink: 0;
+  box-shadow: 0 0 0 1.5px rgba(255,255,255,0.35);
 }
 
 /* Barra de desplazamiento discreta en la lista de ruta */
@@ -206,6 +236,10 @@
   #filtros-estatus { gap: 8px; }
   /* La casilla mide 20px: el renglón completo le da área de toque. */
   .fila-toque { min-height: 44px; }
+
+  /* Pestañas de ruta cómodas para el pulgar. */
+  .pestana-ruta { min-height: 44px; padding: 0 14px; font-size: 12px; }
+  #selector-rutas { gap: 8px; }
 
   /* Revisión por tanda: botones cómodos para el pulgar. */
   .revision-rapida { min-height: 44px; padding: 0 16px; }
