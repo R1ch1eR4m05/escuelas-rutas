@@ -14,6 +14,16 @@
 .chip-activo { opacity: 1; background: color-mix(in srgb, var(--c) 22%, transparent); }
 .chip:focus-visible { outline: 2px solid #0891b2; outline-offset: 2px; }
 
+/* Ventanas superpuestas: `hidden` debe ganarle a `sm:grid`.
+   Tailwind emite `sm:grid` dentro de un media query, que va después en la
+   hoja y con la misma especificidad, así que en pantallas ≥640px anulaba al
+   `hidden` y las dos ventanas quedaban SIEMPRE visibles, bloqueando la app
+   en escritorio. Esta regla (id + clase + !important) zanja el conflicto. */
+#revision.hidden,
+#lista-alertas.hidden {
+  display: none !important;
+}
+
 /* Acciones rápidas de la revisión por tanda */
 .revision-rapida {
   border: 1px solid #31485F;

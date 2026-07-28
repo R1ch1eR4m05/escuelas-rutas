@@ -32,10 +32,27 @@ const Mapa = (() => {
       let pendiente = null;
       new ResizeObserver(() => {
         clearTimeout(pendiente);
-        pendiente = setTimeout(() => mapa.invalidateSize({ animate: false }), 80);
+        pendiente = setTimeout(recalcular, 80);
       }).observe(contenedor);
     }
-    window.addEventListener('load', () => mapa.invalidateSize({ animate: false }));
+    window.addEventListener('load', recalcular);
+  }
+
+  /**
+   * Recalcula el tamaño y, si hiciera falta, vuelve a dibujar.
+   *
+   * En móvil el contenedor puede medir 0 cuando se dibuja por primera vez
+   * (Tailwind llega por CDN y aplica el layout después): Leaflet descarta
+   * todos los marcadores y el mapa queda vacío. Al corregirse el tamaño hay
+   * que redibujar, porque invalidateSize() por sí solo no los recupera.
+   * Solo se redibuja en ese caso —sin pines habiendo escuelas que mostrar—
+   * para no reencuadrar el mapa cada vez que el usuario gira el teléfono.
+   */
+  function recalcular() {
+    if (!mapa) return;
+    mapa.invalidateSize({ animate: false });
+    const hayQueMostrar = Estado.escuelas.some((e) => Estado.visible(e) && Number.isFinite(e.lat));
+    if (!marcadores.size && hayQueMostrar) dibujarEscuelas();
   }
 
   /** Estilo del pin según estatus y alertas. */
