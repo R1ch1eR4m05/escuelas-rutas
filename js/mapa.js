@@ -25,22 +25,16 @@ const Mapa = (() => {
 
     capaRuta = L.layerGroup().addTo(mapa);
 
-    // Tailwind y las fuentes llegan por CDN y aplican el layout DESPUÉS de
-    // que Leaflet ya midió su contenedor. Si el tamaño cambia y no se le
-    // avisa, Leaflet sigue con el viejo y descarta como "fuera de vista"
-    // todos los marcadores: el mapa aparece vacío. Se observa el contenedor
-    // y se recalcula en cuanto cambie de tamaño.
+    // Si el contenedor cambia de tamaño (girar el teléfono, abrir o cerrar
+    // paneles), Leaflet necesita enterarse o el mapa se ve cortado.
     const contenedor = document.getElementById('mapa');
     if (typeof ResizeObserver === 'function') {
       let pendiente = null;
       new ResizeObserver(() => {
         clearTimeout(pendiente);
-        pendiente = setTimeout(() => {
-          mapa.invalidateSize({ animate: false });
-        }, 80);
+        pendiente = setTimeout(() => mapa.invalidateSize({ animate: false }), 80);
       }).observe(contenedor);
     }
-    // Respaldo para navegadores sin ResizeObserver y para la carga inicial.
     window.addEventListener('load', () => mapa.invalidateSize({ animate: false }));
   }
 
@@ -59,6 +53,13 @@ const Mapa = (() => {
 
   /** Redibuja todos los pines del municipio activo aplicando filtros. */
   function dibujarEscuelas() {
+    // Antes de calcular qué entra en pantalla, Leaflet debe conocer el
+    // tamaño real del contenedor. Tailwind y las fuentes llegan por CDN y
+    // aplican el layout DESPUÉS de que el mapa se inicializó: con el tamaño
+    // viejo, el agrupador descarta todos los marcadores por creerlos fuera
+    // de vista y el mapa aparece vacío.
+    mapa.invalidateSize({ animate: false });
+
     if (capaEscuelas) { mapa.removeLayer(capaEscuelas); capaEscuelas = null; }
     marcadores.clear();
 
