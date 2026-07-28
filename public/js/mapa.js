@@ -24,6 +24,24 @@ const Mapa = (() => {
     }).addTo(mapa);
 
     capaRuta = L.layerGroup().addTo(mapa);
+
+    // Tailwind y las fuentes llegan por CDN y aplican el layout DESPUÉS de
+    // que Leaflet ya midió su contenedor. Si el tamaño cambia y no se le
+    // avisa, Leaflet sigue con el viejo y descarta como "fuera de vista"
+    // todos los marcadores: el mapa aparece vacío. Se observa el contenedor
+    // y se recalcula en cuanto cambie de tamaño.
+    const contenedor = document.getElementById('mapa');
+    if (typeof ResizeObserver === 'function') {
+      let pendiente = null;
+      new ResizeObserver(() => {
+        clearTimeout(pendiente);
+        pendiente = setTimeout(() => {
+          mapa.invalidateSize({ animate: false });
+        }, 80);
+      }).observe(contenedor);
+    }
+    // Respaldo para navegadores sin ResizeObserver y para la carga inicial.
+    window.addEventListener('load', () => mapa.invalidateSize({ animate: false }));
   }
 
   /** Estilo del pin según estatus y alertas. */
