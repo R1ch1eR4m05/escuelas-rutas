@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Escuelas y Rutas · Planeador de visitas</title>
+
+  <!-- Tailwind CSS (CDN, sin paso de compilación) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            tinta: { 900: '#141F2E', 800: '#1B2A3A', 700: '#24384D', 600: '#31485F' },
+            accion: { 600: '#0E7490', 500: '#0891B2' },
+          },
+          fontFamily: { ui: ['Archivo', 'system-ui', 'sans-serif'] },
+        },
+      },
+    };
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet + agrupador de marcadores -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <link rel="stylesheet" href="css/estilos.css" />
+</head>
+
+<body class="font-ui h-screen overflow-hidden bg-slate-100 text-slate-800">
+
+  <!-- ══ Barra superior compacta (solo móvil) ══════════════════════════════
+       En pantallas angostas sustituye a la columna izquierda: muestra la
+       zona activa y despliega el panel de selección. -->
+  <div id="barra-movil" class="sm:hidden fixed top-0 inset-x-0 z-[810] h-14 bg-tinta-800 text-slate-100 flex items-center gap-2 px-3 shadow-lg">
+    <button id="btn-zona-movil" class="flex-1 min-w-0 flex items-center gap-2 text-left rounded-lg px-2 -mx-1 active:bg-tinta-700 transition"
+      aria-expanded="false" aria-controls="panel-zona">
+      <span class="text-accion-500 text-lg leading-none shrink-0" aria-hidden="true">◎</span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-[10px] uppercase tracking-[0.16em] text-slate-400 leading-tight">Zona</span>
+        <span id="etiqueta-zona-movil" class="block text-sm font-bold truncate leading-tight">Elige estado y municipio</span>
+      </span>
+      <span id="chevron-zona" class="text-slate-400 text-xs shrink-0 transition-transform" aria-hidden="true">▼</span>
+    </button>
+  </div>
+
+  <!-- Fondo oscuro tras las hojas desplegadas (solo móvil) -->
+  <div id="backdrop-movil" class="sm:hidden fixed inset-0 z-[790] bg-black/45 opacity-0 pointer-events-none transition-opacity duration-200"></div>
+
+  <!-- Aviso cuando se publica sin backend (GitHub Pages): la app es de solo
+       consulta y los cambios viven únicamente en este navegador. -->
+  <div id="aviso-estatico" class="hidden fixed bottom-0 inset-x-0 z-[850] bg-amber-500 text-tinta-900 px-4 py-2 text-[11px] sm:text-xs font-semibold flex items-center gap-3 shadow-lg">
+    <span class="flex-1 leading-snug">
+      Vista de demostración: los cambios de estatus y notas se guardan solo en este navegador,
+      y la corrección con INEGI está deshabilitada porque requiere el servidor.
+    </span>
+    <button id="aviso-estatico-cerrar" aria-label="Ocultar aviso"
+      class="shrink-0 text-tinta-900/70 hover:text-tinta-900 text-xl leading-none px-2">×</button>
+  </div>
+
+  <div class="flex h-full">
+
+    <!-- ══ Columna izquierda (escritorio) / hojas independientes (móvil) ══
+         En móvil el contenedor usa `display:contents`, así que sus dos hijos
+         se posicionan por su cuenta: la zona como hoja superior y la ruta
+         como hoja inferior. -->
+    <aside id="col-izq" class="contents sm:flex sm:w-[340px] sm:shrink-0 sm:flex-col sm:bg-tinta-800 text-slate-100">
+
+      <!-- ── Selección de zona, corrección INEGI y filtros ── -->
+      <div id="panel-zona" class="bg-tinta-800">
+        <header class="hidden sm:block px-5 pt-5 pb-4 border-b border-tinta-600">
+          <h1 class="text-lg font-bold tracking-tight">Escuelas <span class="text-accion-500">&</span> Rutas</h1>
+          <p class="text-[11px] uppercase tracking-[0.18em] text-slate-400 mt-0.5">Planeador de visitas escolares</p>
+        </header>
+
+        <!-- Selección de zona -->
+        <section class="px-5 py-4 space-y-3 border-b border-tinta-600">
+          <div>
+            <label for="sel-estado" class="block text-xs font-semibold text-slate-300 mb-1">Estado</label>
+            <select id="sel-estado" class="w-full rounded-md bg-tinta-700 border border-tinta-600 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accion-500">
+              <option value="">Cargando estados…</option>
+            </select>
+          </div>
+          <div>
+            <label for="sel-municipio" class="block text-xs font-semibold text-slate-300 mb-1">Municipio / Región</label>
+            <select id="sel-municipio" disabled class="w-full rounded-md bg-tinta-700 border border-tinta-600 text-sm px-3 py-2 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-accion-500">
+              <option value="">Elige primero un estado</option>
+            </select>
+          </div>
+          <p id="resumen-zona" class="text-xs text-slate-400 leading-relaxed"></p>
+
+          <!-- Atajo a la lista de escuelas mal ubicadas: cuando están todas
+               encimadas en un punto, el mapa no sirve para trabajarlas. -->
+          <button id="btn-lista-alertas" class="hidden w-full rounded-md bg-red-500/15 border border-red-500/40 text-red-300 hover:bg-red-500/25 text-xs font-semibold py-2.5 transition text-left px-3">
+            <span class="alerta-punto mr-1.5"></span>
+            <span id="btn-lista-alertas-texto">Escuelas con error de ubicación</span>
+          </button>
+
+          <button id="btn-validar-municipio" disabled
+            class="w-full rounded-md border border-accion-600 text-accion-500 hover:bg-tinta-700 text-xs font-semibold py-2 transition disabled:opacity-30 disabled:cursor-not-allowed">
+            Corregir ubicaciones del municipio con INEGI
+          </button>
+          <div id="reporte-lote" class="hidden text-[11px] leading-relaxed"></div>
+        </section>
+
+        <!-- Filtros rápidos -->
+        <section class="px-5 py-3 border-b border-tinta-600">
+          <p class="text-xs font-semibold text-slate-300 mb-2">Mostrar en el mapa</p>
+          <div id="filtros-estatus" class="flex flex-wrap gap-1.5 text-[11px]">
+            <button data-filtro="sin_visitar" class="chip chip-activo" style="--c:#64748B">Sin visitar</button>
+            <button data-filtro="pendiente"   class="chip chip-activo" style="--c:#D97706">Pendiente</button>
+            <button data-filtro="visitada"    class="chip chip-activo" style="--c:#16A34A">Visitada</button>
+            <button data-filtro="descartada"  class="chip chip-activo" style="--c:#DC2626">Descartada</button>
+          </div>
+          <label class="fila-toque flex items-center gap-2 mt-3 text-xs text-slate-300 cursor-pointer select-none">
+            <input id="filtro-alertas" type="checkbox" class="accent-accion-500 w-5 h-5" />
+            Solo escuelas con alerta de ubicación <span class="alerta-punto"></span>
+          </label>
+        </section>
+
+        <!-- Cierre de la hoja (solo móvil) -->
+        <div class="sm:hidden px-5 py-3">
+          <button id="btn-cerrar-zona" class="w-full rounded-md bg-tinta-700 text-sm font-semibold py-2.5 active:bg-tinta-600 transition">
+            Ver el mapa
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Ruta del día (elemento firma) ── -->
+      <div id="panel-ruta" class="bg-tinta-800 sm:flex-1 flex flex-col min-h-0">
+        <!-- Asa de arrastre, solo móvil -->
+        <div data-arrastre-ruta class="sm:hidden shrink-0 pt-2.5 pb-1 flex justify-center">
+          <span class="block w-10 h-1.5 rounded-full bg-tinta-600"></span>
+        </div>
+
+        <div class="px-5 pt-4 pb-2 flex items-center justify-between shrink-0">
+          <h2 class="text-sm font-bold">Ruta del día</h2>
+          <div class="flex items-center gap-2">
+            <span id="ruta-conteo" class="text-[11px] px-2 py-0.5 rounded-full bg-tinta-700 text-slate-300">0 paradas</span>
+            <button id="btn-cerrar-ruta" class="sm:hidden text-slate-400 text-2xl leading-none px-2" aria-label="Cerrar ruta del día">×</button>
+          </div>
+        </div>
+        <p class="px-5 text-[11px] text-slate-400 leading-relaxed shrink-0">Toca «Agregar a ruta» dentro de la ficha de cada escuela. El orden se optimiza por cercanía.</p>
+
+        <ol id="lista-ruta" class="flex-1 overflow-y-auto px-5 py-3 space-y-2"></ol>
+
+        <div class="px-5 pb-5 pt-2 space-y-2 border-t border-tinta-600 shrink-0">
+          <p id="ruta-distancia" class="text-[11px] text-slate-400"></p>
+          <button id="btn-optimizar" class="w-full rounded-md bg-tinta-700 hover:bg-tinta-600 text-sm py-2 font-semibold transition disabled:opacity-40" disabled>Reordenar por cercanía</button>
+          <button id="btn-google-maps" class="w-full rounded-md bg-accion-600 hover:bg-accion-500 text-sm py-2 font-semibold transition disabled:opacity-40" disabled>Abrir ruta en Google Maps ↗</button>
+          <button id="btn-limpiar-ruta" class="w-full text-[11px] text-slate-400 hover:text-slate-200 transition">Vaciar ruta</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ══ Mapa ══ -->
+    <main class="flex-1 relative">
+      <div id="mapa" class="absolute inset-0"></div>
+
+      <!-- Mensaje inicial -->
+      <div id="mensaje-vacio" class="absolute inset-0 z-[500] grid place-items-center pointer-events-none px-6">
+        <div class="bg-white/95 backdrop-blur rounded-xl shadow-lg px-6 sm:px-8 py-6 text-center max-w-sm">
+          <p class="text-2xl mb-2">🗺️</p>
+          <p class="font-bold text-slate-700">Elige un estado y un municipio</p>
+          <p class="text-sm text-slate-500 mt-1">Solo se cargan al mapa las escuelas de la zona seleccionada.</p>
+        </div>
+      </div>
+
+      <!-- Leyenda (se oculta en móvil: el mapa manda) -->
+      <div class="hidden sm:block absolute bottom-4 left-4 z-[500] bg-white/95 backdrop-blur rounded-lg shadow px-3 py-2 text-[11px] space-y-1">
+        <p class="font-bold text-slate-600 mb-1">Simbología</p>
+        <p><span class="punto" style="--c:#64748B"></span> Sin visitar</p>
+        <p><span class="punto" style="--c:#D97706"></span> Pendiente</p>
+        <p><span class="punto" style="--c:#16A34A"></span> Visitada</p>
+        <p><span class="punto" style="--c:#DC2626"></span> Descartada</p>
+        <p><span class="punto punto-alerta" style="--c:#94A3B8"></span> Alerta de ubicación</p>
+      </div>
+
+      <div id="aviso-toast" class="absolute top-4 left-1/2 -translate-x-1/2 z-[600] hidden"></div>
+    </main>
+
+    <!-- ══ Ficha de escuela: columna derecha en escritorio, hoja inferior en móvil ══ -->
+    <aside id="panel-detalle" class="w-[380px] shrink-0 bg-white border-l border-slate-200 flex-col overflow-y-auto hidden">
+      <!-- Contenido inyectado por panel.js -->
+    </aside>
+  </div>
+
+  <!-- ══ Botón flotante de la ruta del día (solo móvil) ══ -->
+  <button id="fab-ruta" class="sm:hidden fixed right-4 bottom-6 z-[780] h-14 pl-4 pr-5 rounded-full bg-violet-600 text-white shadow-xl flex items-center gap-2.5 active:bg-violet-700 transition"
+    aria-label="Abrir la ruta del día">
+    <span class="text-lg leading-none" aria-hidden="true">🚩</span>
+    <span class="text-left leading-tight">
+      <span class="block text-[10px] uppercase tracking-wider text-violet-200">Ruta</span>
+      <span id="fab-conteo" class="block text-sm font-bold">0 paradas</span>
+    </span>
+  </button>
+
+  <!-- ══ Lista de escuelas con error de ubicación ══
+       Estas escuelas no se pueden trabajar desde el mapa (están encimadas
+       en un mismo punto), así que se atienden desde aquí. -->
+  <div id="lista-alertas" class="hidden fixed inset-0 z-[900] bg-slate-900/60 backdrop-blur-sm sm:p-6 sm:grid sm:place-items-center">
+    <div class="bg-slate-100 h-full w-full sm:h-auto sm:max-h-full sm:w-[680px] sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl">
+
+      <header class="bg-tinta-800 text-slate-100 px-4 sm:px-5 py-3 flex items-center gap-3 shrink-0">
+        <div class="flex-1 min-w-0">
+          <h2 class="font-bold leading-tight">Escuelas con error de ubicación</h2>
+          <p id="alertas-resumen" class="text-[11px] text-slate-400 leading-tight mt-0.5"></p>
+        </div>
+        <button id="alertas-cerrar" aria-label="Cerrar lista"
+          class="text-slate-400 hover:text-slate-100 text-3xl leading-none px-2 shrink-0">×</button>
+      </header>
+
+      <div class="bg-tinta-700 px-4 sm:px-5 py-2.5 shrink-0 border-b border-tinta-600">
+        <input id="alertas-buscar" type="search" placeholder="Buscar por nombre, colonia o CCT…"
+          class="w-full rounded-md bg-tinta-800 border border-tinta-600 text-slate-100 placeholder:text-slate-500 text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accion-500" />
+      </div>
+
+      <ol id="alertas-lista" class="flex-1 overflow-y-auto px-3 sm:px-5 py-3 space-y-2.5"></ol>
+
+      <footer class="bg-white border-t border-slate-200 px-4 sm:px-5 py-3 shrink-0">
+        <p id="alertas-pie" class="text-xs text-slate-500 leading-tight"></p>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ══ Revisión por tanda de las coincidencias dudosas ══ -->
+  <div id="revision" class="hidden fixed inset-0 z-[900] bg-slate-900/60 backdrop-blur-sm sm:p-6 sm:grid sm:place-items-center">
+    <div class="bg-slate-100 h-full w-full sm:h-auto sm:max-h-full sm:w-[680px] sm:rounded-2xl flex flex-col overflow-hidden shadow-2xl">
+
+      <header class="bg-tinta-800 text-slate-100 px-4 sm:px-5 py-3 flex items-center gap-3 shrink-0">
+        <div class="flex-1 min-w-0">
+          <h2 class="font-bold leading-tight">Revisar coincidencias dudosas</h2>
+          <p id="revision-resumen" class="text-[11px] text-slate-400 leading-tight mt-0.5"></p>
+        </div>
+        <button id="revision-cerrar" aria-label="Cerrar revisión"
+          class="text-slate-400 hover:text-slate-100 text-3xl leading-none px-2 shrink-0">×</button>
+      </header>
+
+      <!-- Acciones rápidas -->
+      <div class="bg-tinta-700 px-4 sm:px-5 py-2.5 flex flex-wrap gap-2 shrink-0 border-b border-tinta-600">
+        <button data-aceptar-desde="80" class="revision-rapida">Aceptar ≥ 80</button>
+        <button data-aceptar-desde="60" class="revision-rapida">Aceptar ≥ 60</button>
+        <button id="revision-limpiar" class="revision-rapida">Limpiar decisiones</button>
+      </div>
+
+      <ol id="revision-lista" class="flex-1 overflow-y-auto px-3 sm:px-5 py-3 space-y-2.5"></ol>
+
+      <footer class="bg-white border-t border-slate-200 px-4 sm:px-5 py-3 shrink-0 flex items-center gap-3">
+        <p id="revision-conteo" class="text-xs text-slate-500 flex-1 leading-tight"></p>
+        <button id="revision-aplicar" disabled
+          class="rounded-lg bg-accion-600 text-white text-sm font-bold px-5 py-3 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accion-500 transition shrink-0">
+          Aplicar
+        </button>
+      </footer>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/estado.js"></script>
+  <script src="js/ruta.js"></script>
+  <script src="js/mapa.js"></script>
+  <script src="js/panel.js"></script>
+  <script src="js/lista-alertas.js"></script>
+  <script src="js/revision.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/movil.js"></script>
+</body>
+</html>
