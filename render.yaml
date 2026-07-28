@@ -1,0 +1,28 @@
+# Despliegue en Render (https://render.com) — plan gratuito.
+#
+# Render lee este archivo del repositorio y crea el servicio solo. La app
+# no necesita cambios: ya escucha en process.env.PORT.
+#
+# OJO con el plan gratuito:
+#   · El disco es EFÍMERO. La app guarda estatus y notas en db/, así que
+#     esos cambios se pierden cuando el servicio se reinicia. La base viaja
+#     completa en el repositorio, de modo que siempre arranca con los datos
+#     ya corregidos: sirve para mostrar la app, no para trabajar en campo.
+#   · El servicio se duerme tras ~15 minutos sin visitas; la primera carga
+#     después de dormir tarda cerca de un minuto.
+#
+# DENUE_TOKEN no se define aquí a propósito: es un secreto y no debe vivir
+# en el repositorio. Sin él la app funciona completa, salvo los botones de
+# corrección con INEGI, que aparecen deshabilitados. Para habilitarlos, en
+# el panel de Render: Environment → Add Environment Variable → DENUE_TOKEN.
+services:
+  - type: web
+    name: escuelas-rutas
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
